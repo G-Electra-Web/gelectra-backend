@@ -24,7 +24,7 @@ type Admin struct {
 	UserID     int       `gorm:"uniqueIndex;not null" db:"user_id"` // Foreign key referencing User
 	Privileges string    `db:"privileges"`                          // e.g., "full", "limited"
 	AssignedAt time.Time `db:"assigned_at"`
-	User       User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"` // Define the relationship
+	User       User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 // Member represents a member entity
@@ -74,6 +74,7 @@ type Attendee struct {
 	Event   Event `gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE"`
 }
 
+// Project represents a project entity
 type Project struct {
 	ProjectID         int       `gorm:"primaryKey;autoIncrement" db:"project_id"`
 	LeaderID          int       `gorm:"not null" db:"leader_id"` // Foreign key referencing User
@@ -84,32 +85,32 @@ type Project struct {
 	CreatedBy         int       `db:"created_by"`
 	CreatedAt         time.Time `db:"created_at"`
 	JoinCode          string    `db:"join_code"`
-	IsHomePageProject bool      `gorm:"default:false" db:"is_home_page_project"` // New field
+	IsHomePageProject bool      `gorm:"default:false" db:"is_home_page_project"`
 	Users             []User    `gorm:"many2many:project_users;constraint:OnDelete:CASCADE"`
-	Leader            User      `gorm:"foreignKey:LeaderID;constraint:OnDelete:CASCADE"` // Link to User as Leader
+	Leader            User      `gorm:"foreignKey:LeaderID;constraint:OnDelete:CASCADE"`
 }
 
 // GalleryImage represents a gallery image entity
 type GalleryImage struct {
 	ImageID     int       `gorm:"primaryKey;autoIncrement" db:"image_id"`
-	EventID     int       `gorm:"uniqueIndex;not null" db:"event_id"` // Foreign key referencing Event
-	UserID      int       `gorm:"uniqueIndex;not null" db:"user_id"`  // Foreign key referencing User
+	EventID     int       `gorm:"not null" db:"event_id"` // Foreign key referencing Event
+	UserID      int       `gorm:"not null" db:"user_id"`  // Foreign key referencing User
 	ImageURL    string    `db:"image_url"`
 	Description string    `db:"description"`
 	UploadedAt  time.Time `db:"uploaded_at"`
-	Event       Event     `gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE"` // Link to Event
-	User        User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`  // Link to User
+	Event       Event     `gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE"`
+	User        User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 // ProjectRequest represents a project request entity
 type ProjectRequest struct {
 	RequestID   int       `gorm:"primaryKey;autoIncrement" db:"request_id"`
-	ProjectID   int       `gorm:"uniqueIndex;not null" db:"project_id"` // Foreign key referencing Project
-	UserID      int       `gorm:"uniqueIndex;not null" db:"user_id"`    // Foreign key referencing User
+	ProjectID   int       `gorm:"not null" db:"project_id"` // Foreign key referencing Project
+	UserID      int       `gorm:"not null" db:"user_id"`    // Foreign key referencing User
 	Status      string    `db:"status"`
 	RequestedAt time.Time `db:"requested_at"`
-	Project     Project   `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE"` // Link to Project
-	User        User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`    // Link to User
+	Project     Project   `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE"`
+	User        User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 // ProjectMember represents a project member entity
