@@ -1,0 +1,8 @@
+- [X] Make Whitelisting routes
+- [X] Create a project Form
+- [X] Role Management
+- [X] Event Management
+- [X] Auth
+- [X] Admin Page
+- [X] Project Page
+- [ ] Form Bricks Integration

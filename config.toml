@@ -1,0 +1,14 @@
+[app]
+admin = "gelectra@gitam.edu"
+debug = true
+
+[db]
+host = "localhost"
+user = "postgres"
+password = "postgres"
+dbname = "gelectra"
+port = 5432
+
+
+[auth]
+jwt_secret = ""
