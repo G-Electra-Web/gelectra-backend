@@ -13,9 +13,9 @@ type User struct {
 	FullName     string    `db:"full_name"`
 	Role         string    `db:"role"`
 	JoinDate     time.Time `json:"join_date" db:"join_date"`
-	Facebook     string    `db:"facebook"` // New field for Facebook link
-	Twitter      string    `db:"twitter"`  // New field for Twitter link
-	LinkedIn     string    `db:"linkedin"` // New field for LinkedIn link
+	Facebook     string    `db:"facebook"` // Field for Facebook link
+	Twitter      string    `db:"twitter"`  // Field for Twitter link
+	LinkedIn     string    `db:"linkedin"` // Field for LinkedIn link
 }
 
 // Admin represents an admin entity
@@ -30,7 +30,7 @@ type Admin struct {
 // Member represents a member entity
 type Member struct {
 	MemberID        int       `gorm:"primaryKey;autoIncrement" db:"member_id"`
-	UserID          int       `gorm:"uniqueIndex;not_null" db:"user_id"`
+	UserID          int       `gorm:"uniqueIndex;not null" db:"user_id"`
 	RegistrationNum string    `db:"reg_num"`
 	MembershipLevel string    `db:"membership_level"`
 	JoinDate        time.Time `db:"join_date"`
@@ -40,7 +40,7 @@ type Member struct {
 // CoreMember represents a core member entity
 type CoreMember struct {
 	CoreMemberID int       `gorm:"primaryKey;autoIncrement" db:"core_member_id"`
-	UserID       int       `gorm:"uniqueIndex;not_null" db:"user_id"`
+	UserID       int       `gorm:"uniqueIndex;not null" db:"user_id"`
 	Role         string    `db:"role"`
 	JoinDate     time.Time `db:"join_date"`
 	User         User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
@@ -49,7 +49,7 @@ type CoreMember struct {
 // Staff represents a staff entity
 type Staff struct {
 	StaffID    int    `gorm:"primaryKey;autoIncrement" db:"staff_id"`
-	UserID     int    `gorm:"uniqueIndex;not_null" db:"user_id"`
+	UserID     int    `gorm:"uniqueIndex;not null" db:"user_id"`
 	Role       string `db:"role"`
 	Department string `db:"department"`
 	User       User   `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
