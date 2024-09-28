@@ -80,14 +80,14 @@ func WhitelistEmailsFromCSV(c *fiber.Ctx) error {
 			switch role {
 			case "coremember":
 				coreMember := database.CoreMember{
-					UserID:   user.UserID,
+					ID:       user.ID,
 					Role:     "Default Role",
 					JoinDate: time.Now(),
 				}
 				err = database.DB.Table("core_members").Create(&coreMember).Error
 			case "member":
 				member := database.Member{
-					UserID:          user.UserID,
+					ID:              user.ID,
 					RegistrationNum: "Default RegNum",
 					MembershipLevel: "Member",
 					JoinDate:        time.Now(),
@@ -95,7 +95,7 @@ func WhitelistEmailsFromCSV(c *fiber.Ctx) error {
 				err = database.DB.Table("members").Create(&member).Error
 			case "staff":
 				staff := database.Staff{
-					UserID:     user.UserID,
+					ID:         user.ID,
 					Role:       "Default Role",
 					Department: "Default Dept",
 				}
@@ -156,14 +156,14 @@ func WhitelistEmails(c *fiber.Ctx) error {
 		switch input.Role {
 		case "coremember":
 			coreMember := database.CoreMember{
-				UserID:   user.UserID,
+				ID:       user.ID,
 				Role:     user.Role,
 				JoinDate: time.Now(),
 			}
 			err = database.DB.Table("core_members").Create(&coreMember).Error
 		case "member":
 			member := database.Member{
-				UserID:          user.UserID,
+				ID:              user.ID,
 				RegistrationNum: "",
 				MembershipLevel: "Member",
 				JoinDate:        time.Now(),
@@ -171,7 +171,7 @@ func WhitelistEmails(c *fiber.Ctx) error {
 			err = database.DB.Table("members").Create(&member).Error
 		case "staff":
 			staff := database.Staff{
-				UserID:     user.UserID,
+				ID:         user.ID,
 				Role:       "Default Role",
 				Department: "Default Dept",
 			}
@@ -249,11 +249,11 @@ func DeleteUser(c *fiber.Ctx) error {
 	// Delete role-specific data
 	switch req.Role {
 	case "coremember":
-		err = database.DB.Table("core_members").Where("user_id = ?", user.UserID).Delete(&database.CoreMember{}).Error
+		err = database.DB.Table("core_members").Where("user_id = ?", user.ID).Delete(&database.CoreMember{}).Error
 	case "member":
-		err = database.DB.Table("members").Where("user_id = ?", user.UserID).Delete(&database.Member{}).Error
+		err = database.DB.Table("members").Where("user_id = ?", user.ID).Delete(&database.Member{}).Error
 	case "staff":
-		err = database.DB.Table("staff").Where("user_id = ?", user.UserID).Delete(&database.Staff{}).Error
+		err = database.DB.Table("staff").Where("user_id = ?", user.ID).Delete(&database.Staff{}).Error
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid role provided",
@@ -310,21 +310,21 @@ func ChangeUserRole(c *fiber.Ctx) error {
 	}
 
 	err = database.DB.Transaction(func(tx *gorm.DB) error {
-		tx.Table("core_members").Where("user_id = ?", user.UserID).Delete(&database.CoreMember{})
-		tx.Table("members").Where("user_id = ?", user.UserID).Delete(&database.Member{})
-		tx.Table("staff").Where("user_id = ?", user.UserID).Delete(&database.Staff{})
+		tx.Table("core_members").Where("user_id = ?", user.ID).Delete(&database.CoreMember{})
+		tx.Table("members").Where("user_id = ?", user.ID).Delete(&database.Member{})
+		tx.Table("staff").Where("user_id = ?", user.ID).Delete(&database.Staff{})
 
 		switch req.NewRole {
 		case "coremember":
 			coreMember := database.CoreMember{
-				UserID:   user.UserID,
+				ID:       user.ID,
 				Role:     "Default Role",
 				JoinDate: time.Now(),
 			}
 			return tx.Table("core_members").Create(&coreMember).Error
 		case "member":
 			member := database.Member{
-				UserID:          user.UserID,
+				ID:              user.ID,
 				RegistrationNum: "Default RegNum",
 				MembershipLevel: "Basic",
 				JoinDate:        time.Now(),
@@ -332,7 +332,7 @@ func ChangeUserRole(c *fiber.Ctx) error {
 			return tx.Table("members").Create(&member).Error
 		case "staff":
 			staff := database.Staff{
-				UserID:     user.UserID,
+				ID:         user.ID,
 				Role:       "Default Role",
 				Department: "Default Dept",
 			}
@@ -769,14 +769,14 @@ func EditMemberDetails(c *fiber.Ctx) error {
 func MakeUserAdmin(c *fiber.Ctx) error {
 
 	// Parse the user ID from the request parameters
-	userID := c.Params("id")
-	if userID == "" {
+	ID := c.Params("id")
+	if ID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User ID is required"})
 	}
 
-	// Convert userID to integer
-	var uid int
-	if _, err := fmt.Sscanf(userID, "%d", &uid); err != nil {
+	// Convert ID to integer
+	var uid uint
+	if _, err := fmt.Sscanf(ID, "%d", &uid); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid User ID"})
 	}
 
@@ -797,7 +797,7 @@ func MakeUserAdmin(c *fiber.Ctx) error {
 
 	// Create admin record
 	newAdmin := database.Admin{
-		UserID:     uid,
+		ID:         (uid),
 		Privileges: "full", // or based on input
 		AssignedAt: time.Now(),
 	}
@@ -821,14 +821,14 @@ func MakeUserAdmin(c *fiber.Ctx) error {
 
 func RemoveUserAdmin(c *fiber.Ctx) error {
 	// Parse the user ID from the request parameters
-	userID := c.Params("id")
-	if userID == "" {
+	ID := c.Params("id")
+	if ID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User ID is required"})
 	}
 
-	// Convert userID to integer
+	// Convert ID to integer
 	var uid int
-	if _, err := fmt.Sscanf(userID, "%d", &uid); err != nil {
+	if _, err := fmt.Sscanf(ID, "%d", &uid); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid User ID"})
 	}
 

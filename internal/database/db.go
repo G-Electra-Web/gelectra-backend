@@ -25,18 +25,17 @@ func Connect(k *koanf.Koanf, logger *slog.Logger) {
 
 	logger.Info("Connection Opened to Database")
 	db.AutoMigrate(
-		&User{},           // User must be created first
-		&Admin{},          // Admin depends on User
-		&Member{},         // Member depends on User
-		&CoreMember{},     // CoreMember depends on User
-		&Staff{},          // Staff depends on User
-		&Event{},          // Event does not depend on any other table
-		&GalleryImage{},   // GalleryImage depends on Event and User
-		&Attendee{},       // Attendee depends on User and Event
-		&Project{},        // Project does not depend on any other table
-		&ProjectMember{},  // ProjectMember depends on User and Project
-		&ProjectRequest{}, // ProjectRequest depends on User and Project
-		&Notice{},         // Notice does not depend on any other table
+		&Admin{},
+		&Member{},
+		&CoreMember{},
+		&Staff{},
+		&Event{},
+		&Attendee{},
+		&Project{},
+		&ProjectRequest{},
+		&ProjectMember{},
+		&Notice{},
+		&User{},
 	)
 	logger.Info("Database Migrated")
 

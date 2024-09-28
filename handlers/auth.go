@@ -7,9 +7,20 @@ import (
 	"github.com/gelectra/gelectra-backend/internal/database"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/providers/file"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+var k = koanf.New(".")
+
+func init() {
+	if err := k.Load(file.Provider("config.toml"), toml.Parser()); err != nil {
+		panic(err)
+	}
+}
 
 func Login(c *fiber.Ctx) error {
 	type LoginInput struct {
@@ -20,6 +31,27 @@ func Login(c *fiber.Ctx) error {
 	var input LoginInput
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	// Check if the input username and password match the admin credentials from config.toml
+	adminUsername := k.String("admin.username")
+	adminPassword := k.String("admin.password")
+
+	if input.Username == adminUsername && input.Password == adminPassword {
+		// Generate JWT token for admin
+		claims := jwt.MapClaims{
+			"user_id": "admin",
+			"role":    "admin",
+			"exp":     time.Now().Add(time.Hour * 24).Unix(),
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
+		}
+
+		return c.JSON(fiber.Map{"token": tokenString})
 	}
 
 	// Find user in the database
@@ -33,11 +65,11 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// Generate JWT token
+	// Generate JWT token for regular user
 	claims := jwt.MapClaims{
-		"user_id": user.UserID,
+		"user_id": user.ID,
 		"role":    user.Role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Token expires in 24 hours
+		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -46,7 +78,7 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
-	return c.JSON(fiber.Map{"token": tokenString})
+	return c.JSON(fiber.Map{"token": tokenString, "user": user.Role})
 }
 
 func SignUp(c *fiber.Ctx) error {

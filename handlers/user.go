@@ -28,12 +28,12 @@ func CreateProject(c *fiber.Ctx) error {
 
 	// Create the project
 	project := database.Project{
-		LeaderID:    input.LeaderID,
+		LeaderID:    uint(input.LeaderID),
 		ProjectName: input.ProjectName,
 		Description: input.Description,
 		ExtraLink:   input.ExtraLink,
 		Status:      "pending",
-		CreatedBy:   input.LeaderID,
+		CreatedBy:   uint(input.LeaderID),
 		JoinCode:    joinCode,
 		CreatedAt:   time.Now(),
 	}

@@ -1,6 +1,6 @@
-[app]
-admin = "gelectra@gitam.edu"
-debug = true
+[admin]
+username = "gelectra@gitam.edu"
+password = "123"
 
 [db]
 host = "localhost"
@@ -11,4 +11,4 @@ port = 5432
 
 
 [auth]
-jwt_secret = ""
+jwt_secret = "sfdjksfkjslkdfjskldfjlskdjfklsdjfklsdj"
