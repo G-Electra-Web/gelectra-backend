@@ -7,7 +7,6 @@ import (
 // User represents a user entity
 type User struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	Username     string    `gorm:"uniqueIndex" json:"username"`
 	PasswordHash string    `json:"-"`
 	Email        string    `gorm:"uniqueIndex" json:"email"`
 	FullName     string    `json:"full_name"`
@@ -40,7 +39,7 @@ type Member struct {
 // CoreMember represents a core member entity
 type CoreMember struct {
 	ID       uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID   uint      `json:"user_id"`
+	UserID   uint      `json:"user_id"` // Foreign key field referencing User
 	Role     string    `json:"role"`
 	JoinDate time.Time `gorm:"autoCreateTime" json:"join_date"`
 	User     User      `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"-"`

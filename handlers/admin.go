@@ -80,14 +80,14 @@ func WhitelistEmailsFromCSV(c *fiber.Ctx) error {
 			switch role {
 			case "coremember":
 				coreMember := database.CoreMember{
-					ID:       user.ID,
+					UserID:   user.ID,
 					Role:     "Default Role",
 					JoinDate: time.Now(),
 				}
 				err = database.DB.Table("core_members").Create(&coreMember).Error
 			case "member":
 				member := database.Member{
-					ID:              user.ID,
+					UserID:          user.ID,
 					RegistrationNum: "Default RegNum",
 					MembershipLevel: "Member",
 					JoinDate:        time.Now(),
@@ -95,7 +95,7 @@ func WhitelistEmailsFromCSV(c *fiber.Ctx) error {
 				err = database.DB.Table("members").Create(&member).Error
 			case "staff":
 				staff := database.Staff{
-					ID:         user.ID,
+					UserID:     user.ID,
 					Role:       "Default Role",
 					Department: "Default Dept",
 				}
@@ -146,7 +146,7 @@ func WhitelistEmails(c *fiber.Ctx) error {
 			JoinDate: time.Now(),
 		}
 
-		err = database.DB.Table("users").Create(&user).Error
+		err = database.DB.Create(&user).Error
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
@@ -156,14 +156,14 @@ func WhitelistEmails(c *fiber.Ctx) error {
 		switch input.Role {
 		case "coremember":
 			coreMember := database.CoreMember{
-				ID:       user.ID,
+				UserID:   user.ID,
 				Role:     user.Role,
 				JoinDate: time.Now(),
 			}
 			err = database.DB.Table("core_members").Create(&coreMember).Error
 		case "member":
 			member := database.Member{
-				ID:              user.ID,
+				UserID:          user.ID,
 				RegistrationNum: "",
 				MembershipLevel: "Member",
 				JoinDate:        time.Now(),
@@ -171,7 +171,7 @@ func WhitelistEmails(c *fiber.Ctx) error {
 			err = database.DB.Table("members").Create(&member).Error
 		case "staff":
 			staff := database.Staff{
-				ID:         user.ID,
+				UserID:     user.ID,
 				Role:       "Default Role",
 				Department: "Default Dept",
 			}

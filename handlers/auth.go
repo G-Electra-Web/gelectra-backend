@@ -56,7 +56,7 @@ func Login(c *fiber.Ctx) error {
 
 	// Find user in the database
 	var user database.User
-	if err := database.DB.Where("username = ?", input.Username).First(&user).Error; err != nil {
+	if err := database.DB.Where("email = ?", input.Username).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
@@ -73,7 +73,7 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	tokenString, err := token.SignedString([]byte(k.String("auth.jwt_secret")))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
@@ -107,7 +107,7 @@ func SignUp(c *fiber.Ctx) error {
 	var existingUser database.User
 	if err := database.DB.Table("users").Where("email = ?", input.Email).First(&existingUser).Error; err == nil {
 		// Check if other columns are empty
-		if existingUser.Username != "" || existingUser.PasswordHash != "" || existingUser.FullName != "" {
+		if existingUser.PasswordHash != "" || existingUser.FullName != "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Other fields must be empty"})
 		}
 	}
@@ -119,7 +119,6 @@ func SignUp(c *fiber.Ctx) error {
 	}
 
 	newUser := database.User{
-		Username:     input.Username,
 		PasswordHash: string(hashedPassword),
 		Email:        input.Email,
 		FullName:     input.FullName,

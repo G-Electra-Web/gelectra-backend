@@ -116,7 +116,6 @@ func EditProfile(c *fiber.Ctx) error {
 	}
 
 	// Update the user's profile (excluding email)
-	user.Username = input.Username
 	user.FullName = input.FullName
 	user.Facebook = input.Facebook
 	user.Twitter = input.Twitter
