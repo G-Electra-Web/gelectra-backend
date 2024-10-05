@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"encoding/csv"
-	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/gelectra/gelectra-backend/internal/database"
@@ -75,40 +75,19 @@ func WhitelistEmailsFromCSV(c *fiber.Ctx) error {
 			})
 		}
 
-		// Iterate through each role and assign it to the user
+		// Iterate through each role and dynamically assign it to the user
 		for _, role := range roles {
-			switch role {
-			case "coremember":
-				coreMember := database.CoreMember{
-					UserID:   user.ID,
-					Role:     "Default Role",
-					JoinDate: time.Now(),
-				}
-				err = database.DB.Table("core_members").Create(&coreMember).Error
-			case "member":
-				member := database.Member{
-					UserID:          user.ID,
-					RegistrationNum: "Default RegNum",
-					MembershipLevel: "Member",
-					JoinDate:        time.Now(),
-				}
-				err = database.DB.Table("members").Create(&member).Error
-			case "staff":
-				staff := database.Staff{
-					UserID:     user.ID,
-					Role:       "Default Role",
-					Department: "Default Dept",
-				}
-				err = database.DB.Table("staff").Create(&staff).Error
-			default:
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"error": fmt.Sprintf("Invalid role '%s' provided", role),
-				})
+			// Generic structure to hold role data
+			roleData := map[string]interface{}{
+				"user_id":   user.ID,
+				"join_date": time.Now(),
 			}
 
+			// Attempt to insert the role into the corresponding table
+			err = database.DB.Table(role).Create(roleData).Error
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": err.Error(),
+					"error": fmt.Sprintf("Failed to assign role '%s': %s", role, err.Error()),
 				})
 			}
 		}
@@ -139,6 +118,7 @@ func WhitelistEmails(c *fiber.Ctx) error {
 
 	err := database.DB.Table("users").Where("email = ?", input.Email).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
+		// Create a new user
 		user = database.User{
 			FullName: input.Name,
 			Email:    input.Email,
@@ -153,43 +133,22 @@ func WhitelistEmails(c *fiber.Ctx) error {
 			})
 		}
 
-		switch input.Role {
-		case "coremember":
-			coreMember := database.CoreMember{
-				UserID:   user.ID,
-				Role:     user.Role,
-				JoinDate: time.Now(),
-			}
-			err = database.DB.Table("core_members").Create(&coreMember).Error
-		case "member":
-			member := database.Member{
-				UserID:          user.ID,
-				RegistrationNum: "",
-				MembershipLevel: "Member",
-				JoinDate:        time.Now(),
-			}
-			err = database.DB.Table("members").Create(&member).Error
-		case "staff":
-			staff := database.Staff{
-				UserID:     user.ID,
-				Role:       "Default Role",
-				Department: "Default Dept",
-			}
-			err = database.DB.Table("staff").Create(&staff).Error
-		default:
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Invalid role provided",
-			})
+		// Dynamically assign the role
+		roleData := map[string]interface{}{
+			"user_id":   user.ID,
+			"join_date": time.Now(),
 		}
 
+		// Attempt to insert the role into the corresponding table
+		err = database.DB.Table(input.Role).Create(roleData).Error
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
+				"error": fmt.Sprintf("Failed to assign role '%s': %s", input.Role, err.Error()),
 			})
 		}
 
 		return c.JSON(fiber.Map{
-			"message": "Whitelisted User Successfully and assigned role",
+			"message": "Whitelisted user successfully and assigned role",
 			"user":    user,
 		})
 	} else if err != nil {
@@ -199,7 +158,7 @@ func WhitelistEmails(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-		"error": "User Already Exists",
+		"error": "User already exists",
 	})
 }
 
@@ -219,26 +178,27 @@ func GetWhitelistedPending(c *fiber.Ctx) error {
 }
 
 func DeleteUser(c *fiber.Ctx) error {
+	// Struct to hold the incoming request data
 	type DeleteUserRequest struct {
 		Email string `json:"email"`
-		Role  string `json:"role"` // Role should be either "coremember", "member", or "staff"
+		Role  string `json:"role"` // The role should be dynamically handled
 	}
 
 	var req DeleteUserRequest
 
-	// Parse the JSON body into the struct
+	// Parse and validate the request body
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid JSON input",
 		})
 	}
-	var user database.User
 
-	// Check if the user exists
+	// Fetch the user from the database
+	var user database.User
 	err := database.DB.Table("users").Where("email = ?", req.Email).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "User Not Found",
+			"error": "User not found",
 		})
 	} else if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -246,31 +206,22 @@ func DeleteUser(c *fiber.Ctx) error {
 		})
 	}
 
-	// Delete role-specific data
-	switch req.Role {
-	case "coremember":
-		err = database.DB.Table("core_members").Where("user_id = ?", user.ID).Delete(&database.CoreMember{}).Error
-	case "member":
-		err = database.DB.Table("members").Where("user_id = ?", user.ID).Delete(&database.Member{}).Error
-	case "staff":
-		err = database.DB.Table("staff").Where("user_id = ?", user.ID).Delete(&database.Staff{}).Error
-	default:
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid role provided",
-		})
-	}
+	// Use dynamic role to handle the table name
+	roleTable := req.Role // Assuming the table name corresponds to the role name
 
-	if err != nil {
+	// Check if the role table exists and delete the role-specific entry
+	err = database.DB.Table(roleTable).Where("user_id = ?", user.ID).Delete(nil).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "Failed to delete role data for user",
 		})
 	}
 
-	// Delete the user
+	// Delete the user entry from the users table
 	err = database.DB.Table("users").Where("email = ?", req.Email).Delete(&user).Error
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "Failed to delete user",
 		})
 	}
 
@@ -280,28 +231,27 @@ func DeleteUser(c *fiber.Ctx) error {
 }
 
 func ChangeUserRole(c *fiber.Ctx) error {
-	// Define a struct to hold the incoming JSON data
+	// Struct to hold the incoming request data
 	type ChangeUserRoleRequest struct {
 		Email   string `json:"email"`
-		NewRole string `json:"new_role"` // New role should be either "coremember", "member", or "staff"
+		NewRole string `json:"new_role"` // New role will be dynamic
 	}
 
 	var req ChangeUserRoleRequest
 
-	// Parse the JSON body into the struct
+	// Parse and validate the request body
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid JSON input",
 		})
 	}
 
+	// Fetch the user from the database
 	var user database.User
-
-	// Check if the user exists
 	err := database.DB.Table("users").Where("email = ?", req.Email).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "User Not Found",
+			"error": "User not found",
 		})
 	} else if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -310,41 +260,36 @@ func ChangeUserRole(c *fiber.Ctx) error {
 	}
 
 	err = database.DB.Transaction(func(tx *gorm.DB) error {
-		tx.Table("core_members").Where("user_id = ?", user.ID).Delete(&database.CoreMember{})
-		tx.Table("members").Where("user_id = ?", user.ID).Delete(&database.Member{})
-		tx.Table("staff").Where("user_id = ?", user.ID).Delete(&database.Staff{})
-
-		switch req.NewRole {
-		case "coremember":
-			coreMember := database.CoreMember{
-				ID:       user.ID,
-				Role:     "Default Role",
-				JoinDate: time.Now(),
-			}
-			return tx.Table("core_members").Create(&coreMember).Error
-		case "member":
-			member := database.Member{
-				ID:              user.ID,
-				RegistrationNum: "Default RegNum",
-				MembershipLevel: "Basic",
-				JoinDate:        time.Now(),
-			}
-			return tx.Table("members").Create(&member).Error
-		case "staff":
-			staff := database.Staff{
-				ID:         user.ID,
-				Role:       "Default Role",
-				Department: "Default Dept",
-			}
-			return tx.Table("staff").Create(&staff).Error
-		default:
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid role provided")
+		// Delete the current role from the corresponding table dynamically
+		currentRoleTable := user.Role
+		if err := tx.Table(currentRoleTable).Where("user_id = ?", user.ID).Delete(nil).Error; err != nil {
+			return err
 		}
+
+		// Add the user to the new role's table dynamically
+		newRoleTable := req.NewRole
+		roleData := map[string]interface{}{
+			"user_id":    user.ID,
+			"role_name":  req.NewRole,
+			"created_at": time.Now(),
+		}
+
+		// Insert new role data into the dynamically determined table
+		if err := tx.Table(newRoleTable).Create(roleData).Error; err != nil {
+			return err
+		}
+
+		// Update the user role in the users table
+		if err := tx.Table("users").Where("id = ?", user.ID).Update("role", req.NewRole).Error; err != nil {
+			return err
+		}
+
+		return nil
 	})
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "Failed to change user role",
 		})
 	}
 
@@ -364,10 +309,12 @@ func CreateRole(c *fiber.Ctx) error {
 	// Parse the JSON body into the struct
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid JSON input",
+			"status":  "error",
+			"message": "Invalid JSON input",
 		})
 	}
 
+	// Validate role name
 	if req.RoleName == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
@@ -375,33 +322,46 @@ func CreateRole(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if the table exists
-	err := database.DB.Table(req.RoleName).First(&database.Member{}).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, gorm.ErrEmptySlice) {
-		// Table doesn't exist, create it
-		err = database.DB.Table(req.RoleName).AutoMigrate(&database.Member{})
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"status":  "error",
-				"message": "Failed to create role table",
-			})
-		}
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"status":  "success",
-			"message": fmt.Sprintf("Role table '%s' created successfully", req.RoleName),
-		})
-	} else if err != nil {
-		// Some other error occurred
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// Ensure the role name is valid and doesn't contain harmful characters
+	// This can be enhanced with a stricter regex if needed
+	validRoleName := regexp.MustCompile(`^[a-zA-Z_]+$`).MatchString
+	if !validRoleName(req.RoleName) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
-			"message": "Failed to check role table",
+			"message": "Invalid role name. Only letters and underscores are allowed.",
 		})
 	}
 
-	// If the table already exists
+	// Check if the table already exists
+	if database.DB.Migrator().HasTable(req.RoleName) {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":  "success",
+			"message": fmt.Sprintf("Role table '%s' already exists", req.RoleName),
+		})
+	}
+
+	// Define the structure of the new role table dynamically
+	// For example, we can map to a Member structure, or different structures depending on the role
+	type Role struct {
+		ID        uint      `gorm:"primaryKey"`
+		UserID    uint      `gorm:"not null"`
+		RoleName  string    `gorm:"size:100;not null"`
+		CreatedAt time.Time `gorm:"autoCreateTime"`
+		UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	}
+
+	// Attempt to create the new table
+	if err := database.DB.Table(req.RoleName).AutoMigrate(&Role{}); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to create role table",
+		})
+	}
+
+	// Success response
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "success",
-		"message": fmt.Sprintf("Role table '%s' already exists", req.RoleName),
+		"message": fmt.Sprintf("Role table '%s' created successfully", req.RoleName),
 	})
 }
 
@@ -437,8 +397,57 @@ func DeleteRole(c *fiber.Ctx) error {
 		})
 	}
 
-	// Delete the table
-	err := database.DB.Migrator().DropTable(req.RoleName)
+	// Define a struct for the role table records
+	type RoleRecord struct {
+		UserID   uint
+		JoinDate time.Time
+		// Add any additional fields from the role table if necessary
+	}
+
+	// Retrieve all records from the role's table
+	var roleRecords []RoleRecord
+	err := database.DB.Table(req.RoleName).Find(&roleRecords).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to retrieve records from role table",
+		})
+	}
+
+	// If there are records, move them to the members table and update the user table
+	if len(roleRecords) > 0 {
+		for _, record := range roleRecords {
+			// Move to members table
+			member := database.Member{
+				UserID:          record.UserID,
+				RegistrationNum: "Default RegNum", // You can modify or generate a default registration number
+				MembershipLevel: "Member",         // Set default membership level
+				JoinDate:        record.JoinDate,
+			}
+
+			err = database.DB.Table("members").Create(&member).Error
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"status":  "error",
+					"message": "Failed to move records to members table",
+				})
+			}
+
+			// Update the user's role in the user table (set to 'member' or a new role)
+			err = database.DB.Table("users").
+				Where("id = ?", record.UserID).
+				Update("role", "members").Error
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"status":  "error",
+					"message": "Failed to update user role",
+				})
+			}
+		}
+	}
+
+	// Delete the role table
+	err = database.DB.Migrator().DropTable(req.RoleName)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -448,7 +457,7 @@ func DeleteRole(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "success",
-		"message": "Role table deleted successfully",
+		"message": "Role table deleted successfully, records moved to members, and user roles updated",
 	})
 }
 

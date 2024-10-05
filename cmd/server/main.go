@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gelectra/gelectra-backend/api"
+	"github.com/gelectra/gelectra-backend/handlers"
 	"github.com/gelectra/gelectra-backend/internal/database"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -45,6 +46,7 @@ func main() {
 
 	// Initialise DB
 	database.Connect(k, logger)
+	handlers.InitAdmin()
 
 	//Init Fiber
 	app := fiber.New()

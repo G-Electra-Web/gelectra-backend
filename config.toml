@@ -1,6 +1,7 @@
 [admin]
-username = "gelectra@gitam.edu"
+email = "gelectra@gitam.edu"
 password = "123"
+fullname = "gelectra admin"
 
 [db]
 host = "localhost"
